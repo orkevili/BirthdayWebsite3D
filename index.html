@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8b9d4" />
+    <title>Boldog Szülinapot!</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=Quicksand:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div id="dim"></div>
+
+    <div id="finale">
+      <h1 id="finale-title"></h1>
+      <p id="finale-msg"></p>
+    </div>
+
+    <form id="wish" class="hidden" autocomplete="off">
+      <h2>Kívánj valamit! 🌠</h2>
+      <p>Hunyd le a szemed, és gondolj a kívánságodra…</p>
+      <button type="submit">Elküldöm a csillagoknak ✨</button>
+    </form>
+
+    <div id="bottom">
+      <p id="hint" class="hidden"></p>
+      <div id="buttons"></div>
+    </div>
+
+    <button id="sound" aria-label="Hang be/ki">🔊</button>
+
+    <div id="loader">
+      <div class="heart">♥</div>
+      <p>Készül a meglepetés…</p>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+node_modules
+dist
+
+# Személyes képek és zene – csak helyben
+public/photos/*
+!public/photos/README.txt
+public/music/*
+!public/music/README.txt
