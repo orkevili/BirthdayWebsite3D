@@ -6,12 +6,10 @@
     <meta name="theme-color" content="#f8b9d4" />
     <title>Boldog Szülinapot!</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=Quicksand:wght@500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" href="/fonts/quicksand-v37-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/quicksand-v37-latin-ext.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/dancing-script-v29-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/dancing-script-v29-latin-ext.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <canvas id="scene"></canvas>
@@ -37,7 +35,13 @@
 
     <button id="sound" aria-label="Hang be/ki">🔊</button>
 
-    <form id="gate" class="hidden" autocomplete="off">
+    <div id="loader">
+      <div class="heart">♥</div>
+      <p>Készül a meglepetés…</p>
+    </div>
+
+    <!-- A zárat a vite.config.js tölti ki build közben, így a HTML-lel együtt azonnal megjelenik -->
+    <form id="gate" class="hidden" autocomplete="off" onsubmit="event.preventDefault()">
       <div id="gate-card">
         <div id="gate-lock">🔒</div>
         <h2 id="gate-title"></h2>
@@ -47,11 +51,6 @@
         <button type="submit">Kinyitom 💝</button>
       </div>
     </form>
-
-    <div id="loader">
-      <div class="heart">♥</div>
-      <p>Készül a meglepetés…</p>
-    </div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

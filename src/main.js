@@ -17,6 +17,9 @@ import { NOTE_W, createSlice } from './slice.js';
 import { createSky } from './sky.js';
 import { startMic } from './mic.js';
 
+// Előbb rajzolódjon ki a HTML (a zár), csak utána induljon a nehéz WebGL-előkészítés
+await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
+
 // ── Renderer, jelenet, fények ──────────────────────────────────
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -49,7 +52,6 @@ const confetti = new Confetti(scene);
 const balloons = new Balloons(scene);
 const smoke = new Smoke(scene, glowTex);
 const sky = createSky(scene, glowTex, sparks);
-prepareMusic(config.music);
 
 // ── Kamera: "keretezés" – adott méretű területet mindig kitölt ─
 const view = { center: new THREE.Vector3(0, 0, 0), w: 3.6, h: 3.6, dir: new THREE.Vector3(0, 0.15, 1).normalize() };
@@ -157,6 +159,8 @@ let hoverTargets = [];
 
 async function init() {
   const [images] = await Promise.all([Promise.all(config.photos.map((p) => loadImage(p.src))), loadFonts()]);
+  // A zene csak a képek után kezd töltődni, hogy ne lassítsa a betöltőképernyőt
+  prepareMusic(config.music);
 
   gift = createGift(glowTex);
   card = createCard(config, images);
@@ -174,8 +178,7 @@ async function init() {
   renderer.compile(scene, camera);
 
   $('loader').classList.add('done');
-  if (config.unlock?.date) showGate();
-  else startGift();
+  if (!config.unlock?.date) startGift();
 }
 
 // ── Dátumos zár a legelején ────────────────────────────────────
@@ -202,6 +205,10 @@ $('gate').addEventListener('submit', async (ev) => {
     startBackgroundMusic();
     sparks.emit({ position: new THREE.Vector3(0, 0.3, 0), count: 160, speed: 4, up: 0.4, gravity: -2, size: 0.2 });
     await wait(1.2);
+    if (!gift) {
+      $('gate-msg').textContent = 'Még egy pillanat… ✨';
+      await ready;
+    }
     $('gate').classList.add('hidden');
     await wait(0.6);
     startGift();
@@ -552,4 +559,6 @@ renderer.setAnimationLoop((timestamp) => {
   renderer.render(scene, camera);
 });
 
-init();
+// A zár azonnal megjelenik, a 3D-jelenet közben a háttérben készül
+const ready = init();
+if (config.unlock?.date) showGate();

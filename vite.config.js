@@ -27,8 +27,24 @@ function socialPreview() {
   };
 }
 
+// A dátumos zár szövegét már a HTML-be írjuk, így nem kell megvárnia a JS-t és a 3D-t
+function prerenderGate() {
+  return {
+    name: 'prerender-gate',
+    transformIndexHtml(html) {
+      if (!config.unlock?.date) return html;
+      const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      return html
+        .replace('<div id="loader">', '<div id="loader" class="behind">')
+        .replace('<form id="gate" class="hidden"', '<form id="gate"')
+        .replace('<h2 id="gate-title"></h2>', `<h2 id="gate-title">${esc(`Szia ${config.name}! 💕`)}</h2>`)
+        .replace('<p id="gate-question"></p>', `<p id="gate-question">${esc(config.unlock.question)}</p>`);
+    },
+  };
+}
+
 // base: './' → a build bármilyen alkönyvtárból (pl. GitHub Pages) működik
 export default defineConfig({
   base: './',
-  plugins: [socialPreview()],
+  plugins: [socialPreview(), prerenderGate()],
 });

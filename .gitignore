@@ -6,3 +6,6 @@ public/photos/*
 !public/photos/README.txt
 public/music/*
 !public/music/README.txt
+
+# Optimalizálás előtti eredeti képek/zene
+_originals/

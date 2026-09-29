@@ -1,0 +1,17 @@
+# Böngészős gyorsítótár – újranyitáskor ne kelljen mindent újra letölteni
+<IfModule mod_headers.c>
+  # Az oldal maga mindig friss legyen (így a frissítések azonnal látszanak)
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+
+  # A build JS/CSS fájljai tartalom-hash-es nevűek, a betűk verziózottak → soha nem változnak
+  <FilesMatch "\.(js|css|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Képek és zene: egy hét (ha lecseréled valamelyiket azonos néven, érdemes átnevezni)
+  <FilesMatch "\.(jpe?g|png|webp|avif|mp3|m4a|ogg)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
