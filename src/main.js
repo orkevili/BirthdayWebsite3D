@@ -412,6 +412,11 @@ async function sendWish() {
   $('finale-msg').textContent = config.wishMessage;
   $('finale').classList.add('show');
   state = 'end';
+
+  // Záró sor, lassan előtűnve
+  await wait(4);
+  $('closing').textContent = config.closing;
+  $('closing').classList.add('show');
 }
 
 $('wish').addEventListener('submit', (ev) => {

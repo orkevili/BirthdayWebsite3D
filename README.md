@@ -18,6 +18,8 @@ Three.js + Vite alapú, teljesen 3D-s születésnapi oldal:
 - Szövegek, név, képek: `src/config.js`
 - Képek: `public/photos/` (pl. `1.jpg`, `2.jpg`, …). Ha egy kép hiányzik, helykitöltő jelenik meg.
 - Zene: `public/music/international-love.mp3` (a fájlnév és a kezdőpont a `config.js`-ben állítható).
+- Link-előnézet (Messenger, WhatsApp): szövege a `config.js` `preview` mezőjében, képe a `public/preview.jpg`.
+  Feltöltés után írd be a `siteUrl`-t (az oldal teljes címét), különben sok alkalmazás nem mutatja a képet.
 
 ## Futtatás
 

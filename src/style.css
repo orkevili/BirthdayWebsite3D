@@ -358,3 +358,25 @@ body.dim #dim {
 #gate button:hover {
   transform: translateY(-2px) scale(1.03);
 }
+
+/* ── Záró sor ── */
+#closing {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(36px + env(safe-area-inset-bottom));
+  margin: 0;
+  padding: 0 16px;
+  text-align: center;
+  font: 700 clamp(1.7rem, 5.5vw, 2.6rem) 'Dancing Script', cursive;
+  color: #fff;
+  text-shadow: 0 0 14px rgba(255, 150, 210, 0.9), 0 0 36px rgba(214, 58, 122, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 3s ease, transform 3s ease;
+}
+#closing.show {
+  opacity: 1;
+  transform: none;
+}
