@@ -9,3 +9,6 @@ public/music/*
 
 # Optimalizálás előtti eredeti képek/zene
 _originals/
+
+# Személyes konfiguráció – a repóban csak a config.sample.js van
+src/config.js
