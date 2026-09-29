@@ -99,6 +99,8 @@ export function createCake(glowTex, smoke) {
   });
 
   root.visible = false;
+  const bodyTargets = [];
+  root.traverse((o) => o.isMesh && bodyTargets.push(o));
 
   let time = 0;
   let wind = 0;
@@ -106,6 +108,7 @@ export function createCake(glowTex, smoke) {
   return {
     root,
     hitTargets: candles.flatMap((c) => [c.hit, c.candleMesh]),
+    bodyTargets,
     get allOut() {
       return candles.every((c) => !c.lit);
     },

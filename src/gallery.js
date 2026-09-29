@@ -61,6 +61,18 @@ export function createGallery(cfg, images, camera) {
       }, Ease.outBack, i * 0.12)));
     },
 
+    /** A képek a tortába húzódnak (pl. a tortaszelet idejére), majd visszajönnek */
+    async collapse() {
+      if (focused) await this.unfocus();
+      await animate(0.9, (e) => ring.scale.setScalar(Math.max(0.001, 1 - e)), Ease.inCubic);
+      ring.visible = false;
+    },
+
+    async expand() {
+      ring.visible = true;
+      await animate(1.2, (e) => ring.scale.setScalar(Math.max(0.001, e)), Ease.outBack);
+    },
+
     update(dt) {
       time += dt;
       if (!focused) ring.rotation.y += dt * 0.12;

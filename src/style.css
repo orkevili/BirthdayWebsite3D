@@ -249,3 +249,112 @@ body.dim #dim {
 #wish button:hover {
   transform: translateY(-2px) scale(1.03);
 }
+
+/* ── Ütemre "lüktető" finálé felirat ── */
+#finale.beat h1 {
+  animation: beat-pulse 0.35s ease-out;
+}
+@keyframes beat-pulse {
+  from {
+    transform: scale(1.06);
+    text-shadow: 0 0 28px rgba(255, 140, 200, 1), 0 0 60px rgba(214, 58, 122, 0.8), 0 3px 0 rgba(168, 35, 90, 0.5);
+  }
+}
+
+/* ── Dátumos zár ── */
+#gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(255, 214, 232, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: opacity 0.9s ease, visibility 0.9s;
+}
+#gate.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+#gate-card {
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 24px 24px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 24px 60px rgba(168, 35, 90, 0.25);
+  text-align: center;
+  color: var(--ink);
+}
+#gate-card.shake {
+  animation: shake 0.45s ease;
+}
+@keyframes shake {
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
+}
+#gate-lock {
+  font-size: 3rem;
+  line-height: 1;
+  animation: beat 1.6s ease-in-out infinite;
+}
+#gate.unlocked #gate-lock {
+  animation: unlock 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes unlock {
+  from { transform: scale(0.6) rotate(-20deg); }
+}
+#gate-title {
+  margin: 0;
+  font: 700 2.4rem 'Dancing Script', cursive;
+  color: var(--rose);
+}
+#gate-question {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+#gate-date {
+  width: 100%;
+  padding: 0.75em 1em;
+  border-radius: 999px;
+  border: 2px solid #ffc2da;
+  background: #fff;
+  color: var(--deep);
+  font: 700 1.1rem Quicksand, sans-serif;
+  text-align: center;
+  color-scheme: light;
+  accent-color: var(--rose);
+  outline: none;
+}
+#gate-date:focus {
+  border-color: #ff86b9;
+  box-shadow: 0 0 0 4px rgba(255, 134, 185, 0.25);
+}
+#gate-msg {
+  margin: 0;
+  min-height: 1.4em;
+  font-weight: 600;
+  color: var(--deep);
+}
+#gate button {
+  font: 700 1.05rem Quicksand, sans-serif;
+  color: #fff;
+  padding: 0.85em 1.8em;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ff86b9, #e0407a);
+  box-shadow: 0 10px 30px rgba(224, 64, 122, 0.4);
+  transition: transform 0.2s ease;
+}
+#gate button:hover {
+  transform: translateY(-2px) scale(1.03);
+}

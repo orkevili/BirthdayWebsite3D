@@ -6,6 +6,8 @@ let muted = false;
 let music = null;
 let musicGain = null;
 let musicPlaying = false;
+let analyser = null;
+let bg = null;
 const MUSIC_VOL = 0.9;
 
 /** Betölti a saját zenét (még nem játssza le) */
@@ -49,6 +51,11 @@ export function initAudio() {
     musicGain = ctx.createGain();
     musicGain.gain.value = 0;
     music.node.connect(musicGain).connect(ctx.destination);
+    // Ütemfelismeréshez – a némítástól függetlenül is kapja a jelet
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0;
+    music.node.connect(analyser);
     music.el.play().then(() => {
       if (!musicPlaying) music.el.pause();
     }).catch(() => {});
@@ -83,7 +90,7 @@ export const isMuted = () => muted;
 
 const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
-function bell(freq, time, vol = 0.22, dur = 1.6) {
+function bell(freq, time, vol = 0.22, dur = 1.6, dest = master) {
   const partials = [[1, 1], [2, 0.35], [3, 0.12], [4.2, 0.05]];
   for (const [mult, amp] of partials) {
     const osc = ctx.createOscillator();
@@ -93,7 +100,7 @@ function bell(freq, time, vol = 0.22, dur = 1.6) {
     g.gain.setValueAtTime(0, time);
     g.gain.linearRampToValueAtTime(vol * amp, time + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, time + dur / mult);
-    osc.connect(g).connect(master);
+    osc.connect(g).connect(dest);
     osc.start(time);
     osc.stop(time + dur + 0.05);
   }
@@ -153,4 +160,70 @@ export function playHappyBirthday() {
     b += len * beat;
   }
   return t - start;
+}
+
+// ── Halk, zenedobozos háttérzene a finálé előtti részekhez ─────
+// C – Am – F – G akkordfelbontások, 3/4-es bölcsődal-hangulat, véletlen csilingelésekkel.
+const CHORDS = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]];
+
+export function startBackgroundMusic() {
+  if (!ctx || bg) return;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 4);
+  gain.connect(master);
+  const step = 0.34;
+  let next = ctx.currentTime + 0.15;
+  let i = 0;
+  const timer = setInterval(() => {
+    while (next < ctx.currentTime + 0.5) {
+      const [r, t, f] = CHORDS[Math.floor(i / 6) % CHORDS.length];
+      const pos = i % 6;
+      const pattern = [r, f, r + 12, t + 12, r + 12, f];
+      bell(midi(pattern[pos] + 12), next, pos === 0 ? 0.075 : 0.05, 2.2, gain);
+      if (pos === 0) bell(midi(r), next, 0.06, 3, gain);
+      if (pos === 3 && Math.random() < 0.45) {
+        bell(midi([r, t, f][Math.floor(Math.random() * 3)] + 24), next + step / 2, 0.03, 1.6, gain);
+      }
+      next += step;
+      i++;
+    }
+  }, 100);
+  bg = { gain, timer };
+}
+
+export function stopBackgroundMusic(fade = 1.5) {
+  if (!bg) return;
+  const { gain, timer } = bg;
+  bg = null;
+  const t = ctx.currentTime;
+  gain.gain.cancelScheduledValues(t);
+  gain.gain.setValueAtTime(gain.gain.value, t);
+  gain.gain.linearRampToValueAtTime(0, t + fade);
+  setTimeout(() => {
+    clearInterval(timer);
+    gain.disconnect();
+  }, fade * 1000 + 3000);
+}
+
+// ── Ütemfelismerés a saját zenén ──────────────────────────────
+// A mély basszus (~40–170 Hz) lineáris energiáján gyors és lassú mozgóátlag:
+// ha a gyors hirtelen a lassú fölé ugrik (lábdob), az egy ütem.
+const beat = { fast: 0, slow: 0, sinceLast: 0, freq: null };
+
+/** null, ha nincs elemezhető zene; különben { beat, soft } */
+export function musicBeat(dt) {
+  if (!analyser || !musicPlaying || music.el.paused) return null;
+  if (!beat.freq) beat.freq = new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(beat.freq);
+  let energy = 0;
+  for (let i = 1; i <= 4; i++) energy += Math.pow(10, beat.freq[i] / 10);
+  beat.fast += (energy - beat.fast) * Math.min(1, dt * 30);
+  beat.slow += (energy - beat.slow) * Math.min(1, dt * 2);
+  beat.sinceLast += dt;
+  const hit = beat.sinceLast > 0.28 && beat.slow > 1e-7 && beat.fast > beat.slow * 1.3;
+  // ha sokáig nincs felismerhető ütem (csendes rész), akkor is történjen valami
+  const soft = !hit && beat.sinceLast > 1.2;
+  if (hit || soft) beat.sinceLast = 0;
+  return { beat: hit || soft, soft };
 }

@@ -2,9 +2,11 @@
 
 Three.js + Vite alapú, teljesen 3D-s születésnapi oldal:
 
+0. **Dátumos zár:** a nyitóképen egy közös dátumot kell megadni (pl. „Mikor találkoztunk először?”).
+   Utána halk zenedobozos háttérzene szól egészen a gyertyákig.
 1. **Ajándékdoboz** lebeg és forog. Koppintásra megrázkódik, lerepül a teteje, szétnyílnak a falai.
 2. **Képeslap** emelkedik ki belőle. Koppintásra kinyílik: bal oldalon fotók, jobb oldalon az üzenet
-   (egy oldalra koppintva ránagyít, ami telefonon hasznos).
+   (egy oldalra koppintva ránagyít, ami telefonon hasznos). Az üzenet „kézzel” íródik ki.
 3. **Torta** „22”-es égő gyertyákkal. El lehet fújni **mikrofonba fújva**, vagy a gyertyákra koppintva.
 4. **Finálé:** elsötétül, majd konfetti, tűzijáték, lufik és zene jön (saját mp3, vagy zenedobozos
    „Happy Birthday”, ha nincs), a képek pedig körbe keringenek a torta körül (koppintásra előrejönnek).

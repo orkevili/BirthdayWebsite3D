@@ -9,7 +9,11 @@ import { CARD_H, CARD_W, createCard } from './card.js';
 import { createCake } from './cake.js';
 import { createGallery } from './gallery.js';
 import { Balloons, Confetti, PASTELS, Smoke, Sparks, createBokeh, createFloatingHearts } from './effects.js';
-import { initAudio, isMuted, playChime, playHappyBirthday, playMusic, playWhoosh, prepareMusic, setMuted } from './audio.js';
+import {
+  initAudio, isMuted, musicBeat, playChime, playHappyBirthday, playMusic, playWhoosh, prepareMusic, setMuted,
+  startBackgroundMusic, stopBackgroundMusic,
+} from './audio.js';
+import { NOTE_W, createSlice } from './slice.js';
 import { createSky } from './sky.js';
 import { startMic } from './mic.js';
 
@@ -33,7 +37,9 @@ const key = new THREE.DirectionalLight('#fff4ea', 2.2);
 key.position.set(3, 5, 4);
 const rim = new THREE.DirectionalLight('#ffc2e0', 1.6);
 rim.position.set(-4, 2, -3);
-scene.add(hemi, key, rim);
+// Az ütemre felvillanó rózsaszín fény a fináléban
+const beatLight = new THREE.AmbientLight('#ffc4e6', 0);
+scene.add(hemi, key, rim, beatLight);
 
 const glowTex = glowTexture();
 const sparks = new Sparks(scene, glowTex);
@@ -145,6 +151,7 @@ let gift;
 let card;
 let cake;
 let gallery;
+let slice;
 let mic = null;
 let hoverTargets = [];
 
@@ -155,13 +162,60 @@ async function init() {
   card = createCard(config, images);
   cake = createCake(glowTex, smoke);
   gallery = createGallery(config, images, camera);
-  scene.add(gift.group, card.root, cake.root, gallery.ring);
+  slice = createSlice(config);
+  scene.add(gift.group, card.root, cake.root, gallery.ring, slice.root);
+  FRAMES.slice = {
+    center: SLICE_POS.clone().add(new THREE.Vector3(0, slice.height / 2, 0)),
+    w: NOTE_W + 0.2, h: slice.height + 0.4, dir: new THREE.Vector3(0, 0.2, 1),
+  };
 
   Object.assign(view, { center: FRAMES.gift.center.clone(), w: FRAMES.gift.w, h: FRAMES.gift.h, dir: FRAMES.gift.dir.clone().normalize() });
   resize();
   renderer.compile(scene, camera);
 
   $('loader').classList.add('done');
+  if (config.unlock?.date) showGate();
+  else startGift();
+}
+
+// ── Dátumos zár a legelején ────────────────────────────────────
+function showGate() {
+  state = 'gate';
+  $('gate-title').textContent = `Szia ${config.name}! 💕`;
+  $('gate-question').textContent = config.unlock.question;
+  $('gate').classList.remove('hidden');
+}
+
+let gateTries = 0;
+$('gate').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  if (state !== 'gate') return;
+  initAudio();
+  const digits = (v) => String(v ?? '').replace(/\D/g, '');
+  const answer = digits($('gate-date').value);
+  if (answer && answer === digits(config.unlock.date)) {
+    state = 'busy';
+    $('gate-lock').textContent = '🔓';
+    $('gate-msg').textContent = 'Eltaláltad! ✨';
+    $('gate').classList.add('unlocked');
+    playChime();
+    startBackgroundMusic();
+    sparks.emit({ position: new THREE.Vector3(0, 0.3, 0), count: 160, speed: 4, up: 0.4, gravity: -2, size: 0.2 });
+    await wait(1.2);
+    $('gate').classList.add('hidden');
+    await wait(0.6);
+    startGift();
+  } else {
+    gateTries++;
+    const panel = $('gate-card');
+    panel.classList.remove('shake');
+    void panel.offsetWidth; // az animáció újraindításához
+    panel.classList.add('shake');
+    $('gate-msg').textContent = gateTries >= 2 && config.unlock.hint ? config.unlock.hint : 'Hmm, nem ez az… próbáld újra! 💭';
+  }
+});
+
+function startGift() {
   state = 'gift';
   hoverTargets = gift.hitTargets;
   setHint('Egy meglepetés vár rád… Koppints az ajándékra! 🎁');
@@ -172,6 +226,7 @@ async function openGift() {
   hoverTargets = [];
   gift.hovered = false;
   initAudio();
+  startBackgroundMusic();
   setHint('');
 
   await gift.open(() => {
@@ -200,7 +255,11 @@ async function openCard() {
   state = 'cardOpen';
   hoverTargets = card.hitTargets;
   setHint(camera.aspect < 1 ? 'Koppints egy oldalra a nagyításhoz 🔍' : '');
-  setButtons([{ label: 'Tovább a tortához 🎂', onClick: goToCake }]);
+  // Az üzenet "kézzel" íródik ki, a toll nyomában aranyló szikrákkal
+  await card.writeMessage((pos) => sparks.emit({
+    position: pos, count: 1, speed: 0.25, gravity: -0.4, size: 0.05, life: 0.7, colors: ['#ffd36b', '#ffffff', '#ff8fbf'],
+  }));
+  if (state === 'cardOpen') setButtons([{ label: 'Tovább a tortához 🎂', onClick: goToCake }]);
 }
 
 // Nyitott képeslapon egy oldalra koppintva ránagyítunk (főleg telefonon hasznos)
@@ -260,6 +319,7 @@ async function finale() {
   cake.setWind(0);
   setButtons([]);
   setHint('');
+  stopBackgroundMusic(1.2);
 
   await wait(0.8);
   document.body.classList.add('dim');
@@ -283,11 +343,40 @@ async function finale() {
 
   await wait(1.5);
   state = 'finale';
-  hoverTargets = gallery.hitTargets;
-  setHint(config.photos.length ? 'Koppints egy képre, hogy közelebb hozd! 📸' : '');
+  hoverTargets = [...gallery.hitTargets, ...cake.bodyTargets];
+  setHint('Koppints a tortára – rejt valamit neked! 🍰');
+}
 
-  await wait(5);
-  if (state === 'finale') setButtons([{ label: '🌙 Nézz fel az égre', onClick: goToSky }]);
+// ── Tortaszelet üzenettel ──────────────────────────────────────
+const SLICE_POS = new THREE.Vector3(0, 0.55, 2.4);
+
+async function openSlice() {
+  state = 'busy';
+  hoverTargets = [];
+  setHint('');
+  setButtons([]);
+  $('finale').classList.remove('show');
+  gallery.collapse();
+  const from = cake.topCenter();
+  sparks.emit({ position: from, count: 120, speed: 3, up: 0.5, gravity: -2, size: 0.18 });
+  playChime();
+  frameTo(FRAMES.slice, 2.2);
+  await slice.present(from, SLICE_POS);
+  state = 'slice';
+  setHint('Koppints bárhová a folytatáshoz 💕');
+}
+
+async function closeSlice() {
+  state = 'busy';
+  setHint('');
+  frameTo(FRAMES.finale, 2.2);
+  await slice.dismiss(cake.topCenter());
+  $('finale').classList.add('show');
+  await gallery.expand();
+  state = 'finale';
+  hoverTargets = [...gallery.hitTargets, ...cake.bodyTargets];
+  setHint(config.photos.length ? 'Koppints egy képre, hogy közelebb hozd! 📸' : '');
+  setButtons([{ label: '🌙 Nézz fel az égre', onClick: goToSky }]);
 }
 
 async function goToSky() {
@@ -366,6 +455,9 @@ canvas.addEventListener('click', (ev) => {
   } else if (state === 'finale') {
     const hit = pick(ev, gallery.hitTargets);
     if (hit || gallery.focused) gallery.click(hit);
+    else if (pick(ev, cake.bodyTargets)) openSlice();
+  } else if (state === 'slice') {
+    closeSlice();
   }
 });
 
@@ -386,6 +478,25 @@ resize();
 
 let fireworks = false;
 let fireworkTimer = 0;
+let beatPulse = 0;
+
+function launchFirework(strength) {
+  sparks.emit({
+    position: new THREE.Vector3(rand(-5, 5), rand(3, 5.5), rand(-6, -3)),
+    count: Math.round(90 * strength), speed: 3 * Math.sqrt(strength), gravity: -1.2, size: 0.2, life: 1.6,
+    colors: [PASTELS[Math.floor(Math.random() * PASTELS.length)], '#ffffff'],
+  });
+}
+
+function onBeat(soft) {
+  launchFirework(soft ? 0.6 : 1);
+  if (soft) return;
+  beatPulse = 1;
+  const title = $('finale');
+  title.classList.remove('beat');
+  void title.offsetWidth;
+  title.classList.add('beat');
+}
 const timer = new THREE.Timer();
 // Fejlesztéshez: ?slow → lassú (szoftveres) renderelésnél se lassuljanak le az animációk
 const MAX_DT = import.meta.env.DEV && new URLSearchParams(location.search).has('slow') ? 0.3 : 0.05;
@@ -405,19 +516,25 @@ renderer.setAnimationLoop((timestamp) => {
     }
   }
 
-  if (fireworks && (fireworkTimer -= dt) <= 0) {
-    fireworkTimer = rand(0.7, 1.6);
-    sparks.emit({
-      position: new THREE.Vector3(rand(-5, 5), rand(3, 5.5), rand(-6, -3)),
-      count: 90, speed: 3, gravity: -1.2, size: 0.2, life: 1.6,
-      colors: [PASTELS[Math.floor(Math.random() * PASTELS.length)], '#ffffff'],
-    });
+  if (fireworks) {
+    // A saját zene ütemére; ha nincs elemezhető zene, időzítve
+    const b = musicBeat(dt);
+    if (b) {
+      if (b.beat) onBeat(b.soft);
+    } else if ((fireworkTimer -= dt) <= 0) {
+      fireworkTimer = rand(0.7, 1.6);
+      launchFirework(1);
+    }
   }
+  beatPulse = Math.max(0, beatPulse - dt * 3.5);
+  beatLight.intensity = beatPulse * 1.6;
+  if (cake) cake.root.scale.setScalar(1 + beatPulse * 0.025);
 
   gift?.update(dt);
   card?.update(dt);
   cake?.update(dt);
   gallery?.update(dt);
+  slice?.update(dt);
   sparks.update(dt);
   bokeh.update(dt);
   hearts.update(dt);

@@ -376,20 +376,34 @@ export function cardPhotosTexture(cfg, images) {
   return toTexture(c);
 }
 
-export function cardMessageTexture(cfg) {
+/**
+ * Az üzenet-oldal, amely "kézzel" íródik ki: draw(p) a 0..1 haladásnak megfelelően rajzol,
+ * és visszaadja a "toll" aktuális helyét pixelben (vagy null-t).
+ */
+export function createMessageWriter(cfg) {
   const [w, h] = CARD_PX;
-  const [c, ctx] = makeCanvas(w, h);
-  paperBackground(ctx, w, h);
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = palette.rose;
-  ctx.font = `700 104px ${SCRIPT}`;
-  ctx.fillText(cfg.cardTitle, w / 2, 210);
+  // Statikus háttér egyszer megrajzolva
+  const [bg, bctx] = makeCanvas(w, h);
+  paperBackground(bctx, w, h);
+  fillHeart(bctx, 150, h - 180, 60, 'rgba(214,58,122,0.8)');
+  fillHeart(bctx, 215, h - 230, 36, 'rgba(185,154,230,0.85)');
+  sparkle(bctx, 880, 120, 26, palette.gold);
+  sparkle(bctx, 140, 110, 18, palette.gold);
+
+  const [c, ctx] = makeCanvas(w, h);
+  const texture = toTexture(c);
+
+  const titleFont = `700 104px ${SCRIPT}`;
+  const sigFont = `700 76px ${SCRIPT}`;
+  ctx.font = titleFont;
+  const titleW = ctx.measureText(cfg.cardTitle).width;
 
   const sigLines = cfg.signature.split('\n');
   const sigTop = h - 150 - (sigLines.length - 1) * 80;
   const maxBottom = sigTop - 110;
+  ctx.font = sigFont;
+  const sigW = Math.max(...sigLines.map((l) => ctx.measureText(l).width));
 
   // Betűméret automatikus csökkentése, ha hosszú az üzenet
   let size = 46;
@@ -402,29 +416,78 @@ export function cardMessageTexture(cfg) {
     const height = lines.reduce((s, l) => s + (l === null ? lh * 0.5 : lh), 0);
     if (300 + height < maxBottom) break;
   }
-
-  ctx.fillStyle = palette.ink;
-  ctx.textAlign = 'left';
+  const bodyFont = `500 ${size}px ${SANS}`;
+  const body = [];
   let y = 320;
   for (const line of lines) {
     if (line === null) {
       y += lh * 0.5;
       continue;
     }
-    ctx.fillText(line, 110, y);
+    body.push({ text: line, y });
     y += lh;
   }
+  const totalChars = body.reduce((n, l) => n + l.text.length, 0);
+  const part = (p, a, b) => Math.min(1, Math.max(0, (p - a) / (b - a)));
 
-  ctx.textAlign = 'right';
-  ctx.fillStyle = palette.deepRose;
-  ctx.font = `700 76px ${SCRIPT}`;
-  sigLines.forEach((l, i) => ctx.fillText(l, w - 120, sigTop + i * 80));
+  function draw(p) {
+    ctx.drawImage(bg, 0, 0);
+    let pen = null;
 
-  fillHeart(ctx, 150, h - 180, 60, 'rgba(214,58,122,0.8)');
-  fillHeart(ctx, 215, h - 230, 36, 'rgba(185,154,230,0.85)');
-  sparkle(ctx, 880, 120, 26, palette.gold);
-  sparkle(ctx, 140, 110, 18, palette.gold);
-  return toTexture(c);
+    // Cím: balról jobbra "kiíródik"
+    const pt = part(p, 0, 0.15);
+    if (pt > 0) {
+      const x0 = w / 2 - titleW / 2 - 10;
+      const cw = (titleW + 20) * pt;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, 60, cw, 200);
+      ctx.clip();
+      ctx.font = titleFont;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = palette.rose;
+      ctx.fillText(cfg.cardTitle, w / 2, 210);
+      ctx.restore();
+      if (pt < 1) pen = { x: x0 + cw, y: 180 };
+    }
+
+    // Szöveg: betűről betűre
+    let n = Math.floor(part(p, 0.15, 0.85) * totalChars);
+    ctx.font = bodyFont;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = palette.ink;
+    for (const line of body) {
+      if (n <= 0) break;
+      const shown = line.text.slice(0, n);
+      ctx.fillText(shown, 110, line.y);
+      if (n < line.text.length) pen = { x: 110 + ctx.measureText(shown).width, y: line.y - size * 0.35 };
+      n -= line.text.length;
+    }
+
+    // Aláírás
+    const ps = part(p, 0.85, 1);
+    if (ps > 0) {
+      const x0 = w - 120 - sigW - 10;
+      const cw = (sigW + 20) * ps;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, sigTop - 90, cw, sigLines.length * 80 + 60);
+      ctx.clip();
+      ctx.font = sigFont;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = palette.deepRose;
+      sigLines.forEach((l, i) => ctx.fillText(l, w - 120, sigTop + i * 80));
+      ctx.restore();
+      if (ps < 1) pen = { x: x0 + cw, y: sigTop - 20 };
+    }
+
+    texture.needsUpdate = true;
+    return pen;
+  }
+
+  draw(0);
+  return { texture, draw, size: [w, h], chars: totalChars };
 }
 
 export function cardBackTexture() {
@@ -440,6 +503,64 @@ export function cardBackTexture() {
   ctx.font = `600 40px ${SANS}`;
   ctx.textAlign = 'center';
   ctx.fillText('készült nagy-nagy szeretettel', w / 2, h / 2 + 90);
+  return toTexture(c);
+}
+
+// ── Tortaszelet üzenetkártya ──────────────────────────────────
+
+export function noteTexture({ title, message }) {
+  const w = 1024;
+  const [, mctx] = makeCanvas(8, 8);
+  // Betűméret és magasság a szöveg hosszához igazítva
+  let size = 50;
+  let lines;
+  for (; size >= 30; size -= 2) {
+    mctx.font = `500 ${size}px ${SANS}`;
+    lines = wrapText(mctx, message, w - 200);
+    if (lines.length <= 9) break;
+  }
+  const lh = size * 1.5;
+  const textH = lines.reduce((s, l) => s + (l === null ? lh * 0.5 : lh), 0);
+  const h = Math.round(260 + textH + 90);
+  const [c, ctx] = makeCanvas(w, h);
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(120,40,80,0.25)';
+  ctx.shadowBlur = 24;
+  roundRect(ctx, 16, 16, w - 32, h - 32, 48);
+  ctx.fillStyle = palette.cream;
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(214,58,122,0.5)';
+  ctx.lineWidth = 4;
+  ctx.setLineDash([14, 10]);
+  roundRect(ctx, 40, 40, w - 80, h - 80, 34);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = palette.rose;
+  ctx.font = `700 92px ${SCRIPT}`;
+  ctx.fillText(title, w / 2, 160);
+  fillHeart(ctx, w / 2, 205, 36, palette.rose);
+
+  ctx.fillStyle = palette.ink;
+  ctx.font = `500 ${size}px ${SANS}`;
+  let y = 280 + size * 0.4;
+  for (const line of lines) {
+    if (line === null) {
+      y += lh * 0.5;
+      continue;
+    }
+    ctx.fillText(line, w / 2, y);
+    y += lh;
+  }
+
+  fillHeart(ctx, 110, 110, 50, 'rgba(185,154,230,0.85)');
+  fillHeart(ctx, w - 110, h - 110, 56, 'rgba(214,58,122,0.75)');
+  sparkle(ctx, w - 120, 100, 24, palette.gold);
+  sparkle(ctx, 120, h - 110, 20, palette.gold);
   return toTexture(c);
 }
 

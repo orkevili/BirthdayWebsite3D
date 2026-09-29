@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { animate, Ease, lerp } from './anim.js';
-import { cardBackTexture, cardCoverTexture, cardMessageTexture, cardPhotosTexture } from './textures.js';
+import { cardBackTexture, cardCoverTexture, cardPhotosTexture, createMessageWriter } from './textures.js';
 
 export const CARD_W = 2;
 export const CARD_H = 2.75;
@@ -31,7 +31,8 @@ export function createCard(cfg, images) {
 
   const geo = new THREE.PlaneGeometry(CARD_W, CARD_H);
 
-  const message = new THREE.Mesh(geo, pageMaterial(cardMessageTexture(cfg)));
+  const writer = createMessageWriter(cfg);
+  const message = new THREE.Mesh(geo, pageMaterial(writer.texture));
   message.position.x = CARD_W / 2;
   const back = new THREE.Mesh(geo, pageMaterial(cardBackTexture()));
   back.position.set(CARD_W / 2, 0, -0.004);
@@ -101,6 +102,20 @@ export function createCard(cfg, images) {
         cover.position.z = Math.sin(e * Math.PI) * 0.05;
         inner.position.x = lerp(-CARD_W / 2, 0, e);
       }, Ease.inOutCubic);
+    },
+
+    /** Az üzenet "kézzel" kiíródik; onPen(világpozíció) a toll helyét kapja minden képkockán */
+    async writeMessage(onPen) {
+      const [pw, ph] = writer.size;
+      const duration = Math.min(10, Math.max(4, writer.chars * 0.04));
+      const v = new THREE.Vector3();
+      await animate(duration, (e) => {
+        const pen = writer.draw(e);
+        if (pen && onPen) {
+          v.set((pen.x / pw - 0.5) * CARD_W, (0.5 - pen.y / ph) * CARD_H, 0.02);
+          onPen(message.localToWorld(v));
+        }
+      }, Ease.linear);
     },
 
     async flyAway() {
