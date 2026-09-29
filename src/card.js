@@ -107,7 +107,8 @@ export function createCard(cfg, images) {
     /** Az üzenet "kézzel" kiíródik; onPen(világpozíció) a toll helyét kapja minden képkockán */
     async writeMessage(onPen) {
       const [pw, ph] = writer.size;
-      const duration = Math.min(10, Math.max(4, writer.chars * 0.04));
+      const speed = cfg.writeSpeed > 0 ? cfg.writeSpeed : 1;
+      const duration = Math.min(10, Math.max(4, writer.chars * 0.04)) / speed;
       const v = new THREE.Vector3();
       await animate(duration, (e) => {
         const pen = writer.draw(e);
